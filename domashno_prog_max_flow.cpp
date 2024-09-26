@@ -15,8 +15,9 @@ public:
 
 class GraphAdjList : public Graph{
     vector<vector<pair<int,int>>> adjList;
+    vector<int> level; 
  public:
-    GraphAdjList(int n) : Graph(n), adjList(n){}
+    GraphAdjList(int n) : Graph(n), adjList(n), level(n){}
     void addEdge(int k, int m, int cap){
         adjList[k].push_back({m,cap});
     }
@@ -122,12 +123,127 @@ class GraphAdjList : public Graph{
     
         return f;
     }
+    bool dinic_bfs(int s, int t, vector<vector<int>>& capacity, vector<vector<int>>& flow) {
+        fill(level.begin(), level.end(), -1);
+        level[s] = 0;
+        queue<int> q;
+        q.push(s);
+        
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (pair<int, int> el : adjList[u]) {
+                int v = el.first;
+                if (level[v] == -1 && flow[u][v] < capacity[u][v]) {
+                    level[v] = level[u] + 1;
+                    q.push(v);
+                }
+            }
+        }
+        return level[t] != -1;
+    }
+
+    int dinic_dfs(int u, int t, int flow_val, vector<vector<int>>& capacity, vector<vector<int>>& flow, vector<int>& ptr) {
+        if (u == t) {
+            return flow_val;
+        }
+
+        for (int& i = ptr[u]; i < adjList[u].size(); i++) {
+            int v = adjList[u][i].first;
+            if (level[v] == level[u] + 1 && flow[u][v] < capacity[u][v]) {
+                int curr_flow = min(flow_val, capacity[u][v] - flow[u][v]);
+                int temp_flow = dinic_dfs(v, t, curr_flow, capacity, flow, ptr);
+
+                if (temp_flow > 0) {
+                    flow[u][v] += temp_flow;
+                    flow[v][u] -= temp_flow;
+                    return temp_flow;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    int dinic(int s = 0, int t = -1) {
+        if (t == -1) t = n - 1;
+        vector<vector<int>> capacity(n, vector<int>(n, 0));
+        vector<vector<int>> flow(n, vector<int>(n, 0));
+
+        for (int i = 0; i < n; i++) {
+            for (pair<int, int> el : adjList[i]) {
+                capacity[i][el.first] = el.second;
+            }
+        }
+
+        int max_flow = 0;
+        while (dinic_bfs(s, t, capacity, flow)) {
+            vector<int> ptr(n, 0);
+            while (int pushed_flow = dinic_dfs(s, t, INT_MAX, capacity, flow, ptr)) {
+                max_flow += pushed_flow;
+            }
+        }
+
+        return max_flow;
+    }
+    void find_min_cut(int s = 0, int t = -1) {
+
+        vector<bool> visited(n, false);
+        queue<int> q;
+        q.push(s);
+        visited[s] = true;
+        
+        vector<vector<int>> capacity(n,vector<int>(n,0));
+        for(int i=0;i<n;i++){
+            for(int j=0;j<adjList[i].size();j++)
+            capacity[i][adjList[i][j].first]=adjList[i][j].second;
+        }
+        vector<vector<int>> tmp(capacity);
+        int f = 0;
+        vector<int> parent(n);
+        int nf;
+        if(t==-1)t=n-1;
+        while (nf = dfs(s, t, parent, capacity)) {
+            f += nf;
+            int c = t;
+            while (c != s) {
+                int pr = parent[c];
+                capacity[pr][c] -= nf;
+                capacity[c][pr] += nf;
+                c = pr;
+            }
+        }
+        
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (pair<int, int> el : adjList[u]) {
+                int v = el.first;
+                if (!visited[v] && 0 < capacity[u][v]) {
+                    visited[v] = true;
+                    q.push(v);
+                }
+            }
+        }
+        cout << "Min-Cut edges: " << endl;
+        for (int u = 0; u < n; u++) {
+            if (visited[u]) {
+                for (pair<int, int> el : adjList[u]) {
+                    int v = el.first;
+                    if (!visited[v] && tmp[u][v] > 0) {
+                        cout << u << " - " << v << " (Capacity: " << tmp[u][v] << ")" << endl;
+                    }
+                }
+            }
+        }
+    }
 };
 class GraphAdjMatrix : public Graph{
     vector<vector<int>> adjMatrix;
     vector<vector<int>> adjList;
+    vector<int> level;
 public:
-    GraphAdjMatrix(int n) : Graph(n), adjMatrix(n, vector<int>(n,0)),adjList(n){}
+    GraphAdjMatrix(int n) : Graph(n), adjMatrix(n, vector<int>(n,0)),adjList(n), level(n){}
     void addEdge(int k, int m, int cap){
         adjMatrix[k][m]=cap;
         adjList[k].push_back(m);
@@ -221,17 +337,120 @@ public:
     
         return f;
     }
-    
+    bool dbfs(int s, int t, vector<vector<int>>& flow) {
+        fill(level.begin(), level.end(), -1);
+        level[s] = 0;
+        queue<int> q;
+        q.push(s);
+        
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (int v : adjList[u]) {
+                if (level[v] == -1 && flow[u][v] < adjMatrix[u][v]) {
+                    level[v] = level[u] + 1;
+                    q.push(v);
+                }
+            }
+        }
+        return level[t] != -1;
+    }
+
+    int ddfs(int u, int t, int flow_val, vector<vector<int>>& flow, vector<int>& ptr) {
+        if (u == t) {
+            return flow_val;
+        }
+
+        for (int& i = ptr[u]; i < adjList[u].size(); i++) {
+            int v = adjList[u][i];
+            if (level[v] == level[u] + 1 && flow[u][v] < adjMatrix[u][v]) {
+                int curr_flow = min(flow_val, adjMatrix[u][v] - flow[u][v]);
+                int temp_flow = ddfs(v, t, curr_flow, flow, ptr);
+
+                if (temp_flow > 0) {
+                    flow[u][v] += temp_flow;
+                    flow[v][u] -= temp_flow;
+                    return temp_flow;
+                }
+            }
+        }
+
+        return 0;
+    }
+    int dinic(int s = 0, int t = -1) {
+        if (t == -1) t = n - 1;
+        vector<vector<int>> flow(n, vector<int>(n, 0));
+
+        int max_flow = 0;
+        while (dbfs(s, t, flow)) {
+            vector<int> ptr(n, 0);
+            while (int pushed_flow = ddfs(s, t, INT_MAX, flow, ptr)) {
+                max_flow += pushed_flow;
+            }
+        }
+
+        return max_flow;
+    }
+    void find_min_cut(int s = 0, int t =-1) {
+        vector<bool> visited(n, false);
+        queue<int> q;
+        q.push(s);
+        visited[s] = true;
+        vector<vector<int>> capacity(adjMatrix);
+        int f = 0;
+        vector<int> parent(n);
+        int nf;
+        if(t==-1)t=n-1;
+        while (nf = dfs(s, t, parent, capacity)) {
+            f += nf;
+            int c = t;
+            while (c != s) {
+                int pr = parent[c];
+                capacity[pr][c] -= nf;
+                capacity[c][pr] += nf;
+                c = pr;
+            }
+        }
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (int v : adjList[u]) {
+                if (!visited[v] && capacity[u][v] > 0) {
+                    visited[v] = true;
+                    q.push(v);
+                }
+            }
+        }
+        
+        cout << "Min-Cut edges: " << endl;
+        for (int u = 0; u < n; u++) {
+            if (visited[u]) {
+                for (int v : adjList[u]) {
+                    if (!visited[v] && adjMatrix[u][v] > 0) {
+                        cout << u << " - " << v << " (Capacity: " << adjMatrix[u][v] << ")" << endl;
+                    }
+                }
+            }
+        }
+    }    
 };
 int main()
 {
     int v,e;cin>>v>>e;
+    GraphAdjList g1(v);
     GraphAdjMatrix g(v);
     int k,m,cap;
     for(int i=0;i<e;i++){
         cin>>k>>m>>cap;
         g.addEdge(k,m,cap);
+        g1.addEdge(k,m,cap);
     }
-    cout<<g.edmond_karp()<<" "<<g.ford_flukerson();
+    cout<<g.edmond_karp()<<" "<<g.ford_flukerson()<<" "<<g.dinic();
+    cout<<endl;
+    g.find_min_cut();
+    cout<<endl;
+    cout<<g1.edmond_karp()<<" "<<g1.ford_flukerson()<<" "<<g1.dinic();
+    cout<<endl;
+    g1.find_min_cut();
     return 0;
 }
