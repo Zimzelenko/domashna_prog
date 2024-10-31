@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include <climits>
 using namespace std;
 
 class Graph{
@@ -15,9 +16,10 @@ public:
 
 class GraphAdjList : public Graph{
     vector<vector<pair<int,int>>> adjList;
-    vector<int> level; 
+    vector<int> level, height, excess, seen;
+    queue<int> excess_v;
  public:
-    GraphAdjList(int n) : Graph(n), adjList(n), level(n){}
+    GraphAdjList(int n) : Graph(n), adjList(n), level(n), height(n,0), excess(n,0), seen(n,0){}
     void addEdge(int k, int m, int cap){
         adjList[k].push_back({m,cap});
     }
@@ -165,7 +167,7 @@ class GraphAdjList : public Graph{
         return 0;
     }
 
-    int dinic(int s = 0, int t = -1) {
+    int dinic(int s=0, int t=-1) {
         if (t == -1) t = n - 1;
         vector<vector<int>> capacity(n, vector<int>(n, 0));
         vector<vector<int>> flow(n, vector<int>(n, 0));
@@ -186,7 +188,7 @@ class GraphAdjList : public Graph{
 
         return max_flow;
     }
-    void find_min_cut(int s = 0, int t = -1) {
+    void find_min_cut(int s=0, int t=-1) {
 
         vector<bool> visited(n, false);
         queue<int> q;
@@ -237,13 +239,74 @@ class GraphAdjList : public Graph{
             }
         }
     }
+    void push(int s, int i, vector<vector<int>> &flow, vector<vector<int>> &capacity){
+        int d = min(excess[s], capacity[s][i] - flow[s][i]);
+        flow[s][i] += d;
+        flow[i][s] -= d;
+        excess[s] -= d;
+        excess[i] += d;
+        if (d && excess[i] == d)
+            excess_v.push(i);
+    }
+    void relabel(int u, vector<vector<int>> &flow, vector<vector<int>> &capacity){
+        int d=INT_MAX;
+        for(int i=0;i<n;i++){
+            if(capacity[u][i]-flow[u][i]>0)
+                d=min(d, height[i]);
+        }
+        if(d<INT_MAX)
+            height[u]=d+1;
+    }
+    void discharge(int u, vector<vector<int>> &flow, vector<vector<int>> &capacity){
+        while(excess[u]>0){
+            if(seen[u] < n){
+                int v=seen[u];
+                if(capacity[u][v]-flow[u][v]>0 && height[u]>height[v])
+                    push(u,v,flow,capacity);
+                else
+                    seen[u]++;
+            }
+            else{
+                relabel(u, flow, capacity);
+                seen[u]=0;
+            }
+        }
+    }
+    int pushRelabel(int s=0, int t=-1){
+        height[s]=n;
+        excess[s]=INT_MAX;
+        vector<vector<int>> flow(n,vector<int>(n,0));
+        //queue<int> excess_v;
+        vector<vector<int>> capacity(n,vector<int>(n,0));
+        for(int i=0;i<n;i++){
+            for(int j=0;j<adjList[i].size();j++)
+            capacity[i][adjList[i][j].first]=adjList[i][j].second;
+        }
+        if(t==-1)t=n-1;
+        for (int i = 0; i<n; i++) {
+            if (i!=s)
+                push(s, i,flow,capacity);
+        }
+        while(!excess_v.empty()){
+            int u=excess_v.front();
+            excess_v.pop();
+            if(u!=s && u!=t)
+                discharge(u,flow,capacity);
+        }
+        int max_flow=0;
+        for(int i=0;i<n;i++){
+            max_flow+=flow[i][t];
+        }
+        return max_flow;
+    }
 };
 class GraphAdjMatrix : public Graph{
     vector<vector<int>> adjMatrix;
     vector<vector<int>> adjList;
-    vector<int> level;
+    vector<int> level, height, excess, seen;
+    queue<int> excess_v;
 public:
-    GraphAdjMatrix(int n) : Graph(n), adjMatrix(n, vector<int>(n,0)),adjList(n), level(n){}
+    GraphAdjMatrix(int n) : Graph(n), adjMatrix(n, vector<int>(n,0)),adjList(n), level(n), height(n,0), excess(n,0), seen(n,0){}
     void addEdge(int k, int m, int cap){
         adjMatrix[k][m]=cap;
         adjList[k].push_back(m);
@@ -391,7 +454,7 @@ public:
 
         return max_flow;
     }
-    void find_min_cut(int s = 0, int t =-1) {
+    void find_min_cut(int s = 0, int t = -1) {
         vector<bool> visited(n, false);
         queue<int> q;
         q.push(s);
@@ -432,7 +495,62 @@ public:
                 }
             }
         }
-    }    
+    }
+    void push(int s, int i, vector<vector<int>> &flow){
+        int d = min(excess[s], adjMatrix[s][i] - flow[s][i]);
+        flow[s][i] += d;
+        flow[i][s] -= d;
+        excess[s] -= d;
+        excess[i] += d;
+        if (d && excess[i] == d)
+            excess_v.push(i);
+    }
+    void relabel(int u, vector<vector<int>> &flow){
+        int d=INT_MAX;
+        for(int i=0;i<n;i++){
+            if(adjMatrix[u][i]-flow[u][i]>0)
+                d=min(d, height[i]);
+        }
+        if(d<INT_MAX)
+            height[u]=d+1;
+    }
+    void discharge(int u, vector<vector<int>> &flow){
+        while(excess[u]>0){
+            if(seen[u] < n){
+                int v=seen[u];
+                if(adjMatrix[u][v]-flow[u][v]>0 && height[u]>height[v])
+                    push(u,v,flow);
+                else
+                    seen[u]++;
+            }
+            else{
+                relabel(u, flow);
+                seen[u]=0;
+            }
+        }
+    }
+    int pushRelabel(int s=0, int t=-1){
+        height[s]=n;
+        excess[s]=INT_MAX;
+        vector<vector<int>> flow(n,vector<int>(n,0));
+        //queue<int> excess_v;
+        if(t==-1)t=n-1;
+        for (int i = 0; i<n; i++) {
+            if (i!=s)
+                push(s, i,flow);
+        }
+        while(!excess_v.empty()){
+            int u=excess_v.front();
+            excess_v.pop();
+            if(u!=s && u!=t)
+                discharge(u,flow);
+        }
+        int max_flow=0;
+        for(int i=0;i<n;i++){
+            max_flow+=flow[i][t];
+        }
+        return max_flow;
+    }
 };
 int main()
 {
@@ -445,11 +563,11 @@ int main()
         g.addEdge(k,m,cap);
         g1.addEdge(k,m,cap);
     }
-    cout<<g.edmond_karp()<<" "<<g.ford_flukerson()<<" "<<g.dinic();
+    cout<<g.edmond_karp()<<" "<<g.ford_flukerson()<<" "<<g.dinic()<<" "<<g.pushRelabel();
     cout<<endl;
     g.find_min_cut();
     cout<<endl;
-    cout<<g1.edmond_karp()<<" "<<g1.ford_flukerson()<<" "<<g1.dinic();
+    cout<<g1.edmond_karp()<<" "<<g1.ford_flukerson()<<" "<<g1.dinic()<<" "<<g1.pushRelabel();
     cout<<endl;
     g1.find_min_cut();
     return 0;
