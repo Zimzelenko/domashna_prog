@@ -158,23 +158,21 @@ public:
 	vector<int> findAllSubStrReverse(const String & subStr) {
 		int n = this->length;
 		int m = subStr.length;
-		vector<int> reverseLps(m);
-		constructReverseLPS(subStr, reverseLps);
-
+		vector<int> r_lps(m);
+		constructReverseLPS(subStr, r_lps);
 		vector<int> result;
 		int i = n - 1, j = m - 1;
-
 		while (i >= 0) {
 			if (this->chars[i] == subStr.chars[j]) {
 				i--;
 				j--;
 				if (j < 0) {
 					result.push_back(i + 1);
-					j = reverseLps[j];
+					j = r_lps[j];
 				}
 			} else {
 				if (j != m - 1)
-					j = m - reverseLps[j] - 1;
+					j = m - r_lps[j] - 1;
 				else
 					i--;
 			}
