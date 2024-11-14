@@ -1,5 +1,6 @@
 #include <bits/stdc++.h>
 using namespace std;
+const long long MOD = 1e9 + 7;
 
 class String {
 	char * chars;
@@ -179,6 +180,76 @@ public:
 		}
 		return result;
 	}
+	vector<int> rolling_hash_pow(const String & subStr) {
+        const int p = 26;
+		const int m = 1e9 + 9;
+		unsigned int s = subStr.length, t = this->length;
+		
+		if (s > t) return {};
+
+		vector<long long> p_pow(max(s, t));
+		p_pow[0] = 1;
+		for (int i = 1; i < (int)p_pow.size(); i++) 
+			p_pow[i] = (p_pow[i-1] * p) % m;
+
+		vector<long long> h(t + 1, 0);
+		for (int i = 0; i < t; i++)
+			h[i+1] = (h[i] + (this->chars[i] - 'a' + 1) * p_pow[i]) % m;
+
+		long long h_s = 0;
+		for (int i = 0; i < s; i++) 
+			h_s = (h_s + (subStr.chars[i] - 'a' + 1) * p_pow[i]) % m;
+
+		vector<int> result;
+		for (int i = 0; i + s <= t; i++) {
+			long long cur_h = (h[i+s] + m - h[i]) % m;
+			if (cur_h == h_s * p_pow[i] % m){
+			   bool flag = true;
+			    for(int j = i; j < i + s; j++){
+			        if(chars[j] != subStr.chars[j-i]){
+			            flag = false;
+			            break;
+			        }
+			    }
+			    if(flag)
+			    result.push_back(i);
+			}
+		}
+		return result;
+    }
+    vector<int> rolling_hash_zbir(const String & subStr) { //treba da prasham sho tochno treba
+		const int m = 1e9 + 9;
+		unsigned int s = subStr.length, t = this->length;
+		
+		if (s > t) return {};
+
+		vector<long long> h(t + 1, 0);
+		for (int i = 0; i < t; i++)
+			h[i+1] = (h[i] + (this->chars[i] - 'a' + 1)) % m;
+
+		long long h_s = 0;
+		for (int i = 0; i < s; i++) 
+			h_s = (h_s + (subStr.chars[i] - 'a' + 1)) % m;
+
+		vector<int> result;
+		for (int i = 0; i + s <= t; i++) {
+			long long cur_h = (h[i+s] + m - h[i]) % m;
+			if (cur_h == h_s % m){
+			    bool flag = true;
+			    for(int j = i; j < i + s; j++){
+			        if(chars[j] != subStr.chars[j-i]){
+			            flag = false;
+			            break;
+			        }
+			    }
+			    if(flag)
+			    result.push_back(i);
+			}
+		}
+		return result;
+    }
+
+
 };
 int main()
 {
@@ -203,23 +274,47 @@ int main()
 	String pat(p, p_length);
 	vector<int> print = str.findAllSubStr(pat);
 
+    cout << "Site pojavuvanja: ";
+
 	for (int i : print) {
 		cout << i << " ";
 	}
 	cout << endl;
 
-	cout << str.findFirstSubStr(pat);
+	cout << "Prvo pojavuvanje: " << str.findFirstSubStr(pat);
 
 	cout << endl;
 
-	cout << str.findLastSubStr(pat);
+	cout << "Posledno pojavuvanje: " << str.findLastSubStr(pat);
 
     cout << endl;
 
 	vector<int> print_reverse = str.findAllSubStrReverse(pat);
+	
+	cout << "Site pojavuvanja od pozadi: ";
 
 	for (int i : print_reverse) {
 		cout << i << " ";
+	}
+	
+	cout << endl;
+	
+	cout << "Site pojavuvanja so rolling hash pow: ";
+	
+	vector<int> print_rh_pow = str.rolling_hash_pow(pat);
+	
+	for(int i : print_rh_pow) {
+	    cout << i << " ";
+	}
+	
+	cout << endl;
+	
+	cout << "Site pojavuvanja so rolling hash zbir: ";
+	
+	vector<int> print_rh_zbir = str.rolling_hash_zbir(pat);
+	
+	for(int i : print_rh_zbir) {
+	    cout << i << " ";
 	}
 
 	delete[] s;
