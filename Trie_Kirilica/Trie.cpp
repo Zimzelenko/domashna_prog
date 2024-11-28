@@ -134,10 +134,6 @@ public:
         if (!prefix && !p->child[ALPHABET]) return false;
         return true;
     }
-
-    bool startsWith(wstring prefix) {
-        return search(prefix, true);
-    }
     void print(wofstream &izlez){
         wstring str;
         print(root, izlez, str);
@@ -170,7 +166,7 @@ int main() {
     }
     else izlez << endl << "false";
     */
-   
+
     vlez.close();
     izlez.close();
     return 0;
