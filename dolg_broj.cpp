@@ -42,6 +42,21 @@ public:
         }
     }
 
+    static LongInt generateRandom(int minDigits = 1, int maxDigits = 7) {
+        LongInt result;
+        result.lint.clear();
+
+        int numDigits = minDigits + rand() % (maxDigits - minDigits + 1);
+
+        result.lint.push_back(1 + rand() % 9);
+
+        for (int i = 1; i < numDigits; i++) {
+            result.lint.push_back(rand() % 10);
+        }
+
+        return result;
+    }
+
     bool isGreaterOrEqualAbs(const LongInt& other) const {
         if (lint.size() != other.lint.size()) {
             return lint.size() > other.lint.size();
@@ -237,6 +252,36 @@ public:
         return result;
     }
 
+    bool isPrime(int iter = 5) const {
+        if (isNegative || (lint.size() == 1 && lint[0] == 0)) {
+            return false; 
+        }
+        if (lint.size() == 1 && (lint[0] == 2 || lint[0] == 3 || lint[0] == 5)) {
+            return true; 
+        }
+        if (lint.size() == 1 && (lint[0] == 1 || lint[0] % 2 == 0)) {
+            return false; 
+        }
+    
+        LongInt n_minus_1 = *this - LongInt("1");
+        LongInt d = n_minus_1;
+        int s = 0;
+        while ((d % LongInt("2")).isEqual(LongInt("0"))) {
+            d = d / LongInt("2");
+            s++;
+        }
+    
+        for (int i = 0; i < iter; i++) {
+            LongInt a = LongInt("2") + (generateRandom() % (*this - LongInt("3")));
+    
+            if (checkComposite(*this, a, d, s)) {
+                return false;
+            }
+        }
+    
+        return true;
+    }
+
 private:
 
     static LongInt addAbsoluteValues(const LongInt& a, const LongInt& b) {
@@ -307,74 +352,51 @@ private:
 
         return result;
     }
+
+    static LongInt modular_pow(const LongInt& a, const LongInt& b, const LongInt& mod) {
+        LongInt result("1");
+        LongInt base = a % mod;
+        LongInt exponent = b;
+
+        while (!exponent.isEqual(LongInt("0"))) {
+            if ((exponent % LongInt("2")).isEqual(LongInt("1"))) {
+                result = (result * base) % mod;
+            }
+            base = (base * base) % mod;
+            exponent = exponent / LongInt("2");
+        }
+
+        return result;
+    }
+
+    static bool checkComposite(const LongInt& n, const LongInt& a, const LongInt& d, int s) {
+        LongInt x = modular_pow(a, d, n);
+        if (x.isEqual(LongInt("1")) || x.isEqual(n - LongInt("1"))) {
+            return false;
+        }
+        for (int r = 1; r < s; r++) {
+            x = modular_pow(x, LongInt("2"), n);
+            if (x.isEqual(n - LongInt("1"))) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
 
 int main() {
-        LongInt a("123456789");
-    LongInt b("987654321");
-
-    LongInt sum = a + b;
-    LongInt product = a * b;
-    LongInt difference = a - b;
-
-    cout << "Sum: ";
-    sum.print();
-
-    cout << "Product: ";
-    product.print();
-
-    cout << "Difference: ";
-    difference.print();
-
-    LongInt c("1000");
-    LongInt d("25");
-    LongInt quotient = c / d;
-    cout << "Quotient (1000 / 25): ";
-    quotient.print();
-
-    LongInt e("-1000");
-    LongInt f("25");
-    LongInt quotient2 = e / f;
-    cout << "Quotient (-1000 / 25): ";
-    quotient2.print();
-
-    LongInt g("1000");
-    LongInt h("-25");
-    LongInt quotient3 = g / h;
-    cout << "Quotient (1000 / -25): ";
-    quotient3.print();
-
-    LongInt i("-1000");
-    LongInt j("-25");
-    LongInt quotient4 = i / j;
-    cout << "Quotient (-1000 / -25): ";
-    quotient4.print();
-
-    LongInt k("1000");
-    LongInt l("25");
-    LongInt modulo = k % l;
-    cout << "Modulo (1000 % 25): ";
-    modulo.print();
-
-    LongInt m("-1000");
-    LongInt n("25");
-    LongInt modulo2 = m % n;
-    cout << "Modulo (-1000 % 25): ";
-    modulo2.print();
+    srand(time(0));
 
     string num;
-    cout << "Enter a number to factorize: ";
-    cin >> num;
+    cout << "Enter a number to test for primality: ";
+    while(cin >> num){
 
-    LongInt x(num);
-    auto factors = x.factorization();
-
-    cout << "Factors of " << num << ": ";
-    for (const auto& f : factors) {
-        f.first.print();
-        cout<< "^" << f.second << " ";
+        LongInt x(num);
+        if (x.isPrime()) {
+            cout << num << " is probably prime." << endl;
+        } else {
+            cout << num << " is composite." << endl;
+        }
     }
-    cout << endl;
-
     return 0;
 }
